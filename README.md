@@ -4,6 +4,8 @@
 
 The example workspace is fictional. Avery Quinn, Northwind Labs, Harbor & Co., Bramble Institute of Technology, Maplepath Academy, Lantern and Lumenfield are not real.
 
+![cvgen start screen, with the braille logo, menu, and prompt](docs/screenshots/start.png)
+
 ## Install
 
 Python 3.11 or newer:
@@ -81,6 +83,43 @@ The form asks which job (a saved file under `jobs/`, or a pasted URL or text), t
 A job URL is downloaded and saved as `jobs/<slug>.txt`. A public LinkedIn URL is read from the guest job endpoint when the site allows it. If the page is behind a login, paste the posting text instead.
 
 `ctrl+d` opens the dashboard. Base CVs are one Markdown file each, in one language and one length. The list shows language, length, and pages used. The details pane shows the absolute path of the Markdown, DOCX, and PDF. Tailored CVs show the job name, the date, the match percent, and met / partial / missing. `n` adds a base CV (`cvgen variant add` does the same). `j` and `k` move, `b` builds the row, `v` checks it, `tab` switches to the tailored list, `enter` opens its report, and `esc` returns. Shortcuts can be aliased in `cvgen.toml` under `[ui.keys]`, for example `build_all = "f2"`.
+
+## Screenshots
+
+These are the interactive screen, captured headlessly from the fictional example workspace. The pictures below are PNG. Each one also has an SVG from Textual next to it in `docs/screenshots/`.
+
+**Start.** The braille logo, the name on the CV, and the menu with its shortcut on the right. The prompt along the bottom takes a job URL, a path, or posting text. `/` opens commands.
+
+![Start screen](docs/screenshots/start.png)
+
+**Command palette.** Press `/` and Enter, or `ctrl+p`. Every action is listed with a one-line description.
+
+![Command palette](docs/screenshots/palette.png)
+
+**Dashboard.** Base CVs with language, length, and pages used against the limit (`1/1 OK`). The details pane shows the absolute path of the Markdown, DOCX, and PDF. A tailored row shows the job, the date, the match percent, and met / partial / missing.
+
+![Dashboard](docs/screenshots/dashboard.png)
+
+**Tailor to a job.** Pick a saved posting or paste a URL or the text, then choose Spanish or English and Short (1 page) or Extended (2 pages). Provider, model, and preview-only stay under Advanced. Generate CV and Cancel stay on screen.
+
+![Tailor form](docs/screenshots/tailor.png)
+
+**Result.** After Generate CV, the popup shows the match, met / partial / missing, and the absolute paths of the PDF, DOCX, and report, with Open PDF, Open report, and Copy path. The shot uses a prerecorded report, so no API key is involved.
+
+![Tailor result](docs/screenshots/tailor-result.png)
+
+**Onboarding.** With no workspace yet, the first screen creates `cvgen.toml`, `source/`, `cv/`, `jobs/`, and `out/`.
+
+![Onboarding wizard](docs/screenshots/onboard.png)
+
+Regenerate them from a checkout (LibreOffice is needed for the page counts):
+
+```bash
+pip install '.[ui]' cairosvg
+python scripts/make_screenshots.py
+```
+
+The script builds the example workspace under `/tmp/cv`, drives `App.run_test` at 148×46, and saves SVG with `App.save_screenshot`. The PNG copy uses DejaVu Sans Mono so the braille logo and the box drawing keep their shapes. `cairosvg` is only for that conversion. It is not a runtime dependency.
 
 Without a terminal, `cvgen` prints the command help. `cvgen init`, `cvgen build`, `cvgen verify`, and `cvgen tailor` stay non-interactive.
 
@@ -242,7 +281,7 @@ cvgen verify
 cvgen tailor --job jobs/lumenfield-backend.txt --lang es --length short --dry-run
 ```
 
-En una terminal, `cvgen` abre una pantalla con la paleta Dracula. Hace falta el extra de interfaz: `pipx install '.[ui]'`. Pega una URL, una ruta o el texto de la vacante y pulsa Enter. El formulario pregunta la vacante, el idioma (español o inglés) y la extensión (corta, 1 página, o extendida, 2 páginas). Generar CV muestra los pasos y, al terminar, el porcentaje de encaje y las rutas absolutas del PDF, DOCX e informe. Una URL se guarda en `jobs/`. Si la página pide login, pega el texto. `ctrl+d` abre el tablero de CVs base (un Markdown, un idioma y una extensión) con sus rutas, y la lista de CVs adaptados. `cvgen variant add` crea un CV base. Sin terminal, `cvgen` imprime la ayuda. `cvgen init`, `build`, `verify` y `tailor` siguen siendo comandos directos.
+En una terminal, `cvgen` abre una pantalla con la paleta Dracula. Las capturas están en [Screenshots](#screenshots). Hace falta el extra de interfaz: `pipx install '.[ui]'`. Pega una URL, una ruta o el texto de la vacante y pulsa Enter. El formulario pregunta la vacante, el idioma (español o inglés) y la extensión (corta, 1 página, o extendida, 2 páginas). Generar CV muestra los pasos y, al terminar, el porcentaje de encaje y las rutas absolutas del PDF, DOCX e informe. Una URL se guarda en `jobs/`. Si la página pide login, pega el texto. `ctrl+d` abre el tablero de CVs base (un Markdown, un idioma y una extensión) con sus rutas, y la lista de CVs adaptados. `cvgen variant add` crea un CV base. Sin terminal, `cvgen` imprime la ayuda. `cvgen init`, `build`, `verify` y `tailor` siguen siendo comandos directos.
 
 `cvgen init` crea un ejemplo con una persona ficticia, Avery Quinn, y empresas ficticias. `short` debe caber en una página y `extended` en dos. Si el texto no cabe, el programa reduce la letra hasta un mínimo (9 pt en la versión corta, 9,5 pt en la extendida) y, si aún se pasa, termina con error para que recortes el Markdown.
 
