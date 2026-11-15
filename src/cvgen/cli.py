@@ -12,6 +12,7 @@ from cvgen.config import ConfigError, load_workspace
 from cvgen.providers.base import ProviderError
 from cvgen.scaffold import init_workspace
 from cvgen.tailor import run_tailor
+from cvgen.tui import launch
 from cvgen.util import display_path
 from cvgen.verify import verify_paths
 
@@ -49,6 +50,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--version", action="store_true", help="print the version and exit")
     sub = parser.add_subparsers(dest="command")
+
+    sub.add_parser("ui", help="open the interactive screen (also the default in a terminal)")
 
     init = sub.add_parser("init", help="create a workspace with a fictional example")
     init.add_argument("--dir", type=Path, default=Path("."), help="directory to create (default: .)")
@@ -175,6 +178,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.version:
         print(f"cvgen {__version__}")
         return 0
+    if args.command == "ui" or (not args.command and _terminal()):
+        return launch(config_path)
     if not args.command:
         parser.print_help()
         return 2
@@ -195,6 +200,10 @@ def main(argv: list[str] | None = None) -> int:
         return exc.code
     print(f"ERROR: unknown command {args.command!r}", file=sys.stderr)
     return 2
+
+
+def _terminal() -> bool:
+    return sys.stdin.isatty() and sys.stdout.isatty()
 
 
 def app() -> None:
