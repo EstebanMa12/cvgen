@@ -1,0 +1,12 @@
+include README.md
+include LICENSE
+include pyproject.toml
+recursive-include src/cvgen *.py
+recursive-include src/cvgen py.typed
+recursive-include src/cvgen/templates *
+recursive-include src/cvgen/vendor *.mjs
+recursive-include src/cvgen/vendor *.json
+recursive-include tests *.py
+global-exclude __pycache__
+global-exclude *.py[cod]
+global-exclude */node_modules/*

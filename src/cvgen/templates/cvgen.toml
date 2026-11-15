@@ -1,0 +1,62 @@
+# cvgen workspace. Do not put API keys in this file.
+# Export OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY or CURSOR_API_KEY instead.
+
+[person]
+name = "Avery Quinn"
+
+[paths]
+source = "source/consolidated.md"
+output_dir = "out"
+tailored_dir = "out/tailored"
+
+[build]
+font = "Times New Roman"
+locale_es = "es"
+locale_en = "en-US"
+short_max_pages = 1
+extended_max_pages = 2
+
+[verify]
+forbidden = ["TODO", "lorem", "placeholder"]
+extra_known_tech = []
+
+[verify.required]
+short-en = ["FastAPI"]
+short-es = ["FastAPI"]
+extended-en = ["FastAPI", "Lantern"]
+extended-es = ["FastAPI", "Lantern"]
+
+[tailor]
+provider = "openai"
+model = "gpt-4o-mini"
+temperature = 0.2
+# base_url = "http://127.0.0.1:11434/v1"
+# api_key_env = "OPENAI_API_KEY"
+
+[[variants]]
+id = "short-en"
+input = "cv/avery-quinn-short-en.md"
+output = "avery-quinn-short-en.docx"
+length = "short"
+lang = "en"
+
+[[variants]]
+id = "short-es"
+input = "cv/avery-quinn-short-es.md"
+output = "avery-quinn-short-es.docx"
+length = "short"
+lang = "es"
+
+[[variants]]
+id = "extended-en"
+input = "cv/avery-quinn-extended-en.md"
+output = "avery-quinn-extended-en.docx"
+length = "extended"
+lang = "en"
+
+[[variants]]
+id = "extended-es"
+input = "cv/avery-quinn-extended-es.md"
+output = "avery-quinn-extended-es.docx"
+length = "extended"
+lang = "es"

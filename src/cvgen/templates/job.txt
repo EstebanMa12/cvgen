@@ -1,0 +1,19 @@
+Lumenfield — Backend Engineer
+
+Lumenfield is a fictional newsroom-tools company. This posting is an example
+for `cvgen tailor`. It is not a source of facts about the candidate.
+
+Requirements
+- Python
+- FastAPI
+- PostgreSQL
+- Docker
+- GitHub Actions
+- Kubernetes experience operating a production cluster
+- Oracle PL/SQL
+
+Nice to have
+- TypeScript
+- React
+
+The team writes in English and Spanish. The group has 4 people.

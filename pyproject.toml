@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cvgen"
+version = "0.1.0"
+description = "Build, verify and tailor CVs from Markdown without inventing facts"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.11"
+authors = [{ name = "cvgen contributors" }]
+keywords = ["cv", "resume", "docx", "markdown", "ats"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Office/Business",
+]
+dependencies = ["python-docx>=1.1.2"]
+
+[project.optional-dependencies]
+openai = ["openai>=1.40"]
+anthropic = ["anthropic>=0.39"]
+gemini = ["google-genai>=1.0"]
+dev = ["pytest>=8"]
+all = ["openai>=1.40", "anthropic>=0.39", "google-genai>=1.0"]
+
+[project.scripts]
+cvgen = "cvgen.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+cvgen = ["py.typed", "templates/*", "vendor/*"]
+
+[tool.setuptools.exclude-package-data]
+cvgen = ["vendor/node_modules*", "vendor/node_modules/**"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+markers = [
+    "pdf: needs LibreOffice (soffice) to export a real PDF",
+]
