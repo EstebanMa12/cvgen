@@ -16,7 +16,13 @@ from cvgen.pdf import count_pdf_pages
 from cvgen.providers.base import DEFAULT_MODELS, ProviderError, canonicalize
 from cvgen.scaffold import init_workspace
 from cvgen.tailor import run_tailor
+from cvgen.util import friendly_path, tint
 from cvgen.verify import verify_paths
+
+_GREEN = "#50fa7b"
+_ORANGE = "#ffb86c"
+_RED = "#ff5555"
+_COMMENT = "#6272a4"
 
 
 @dataclass
@@ -173,6 +179,24 @@ def page_badge(pages: int | None, limit: int) -> str:
     return f"{pages}/{limit} OK"
 
 
+def page_tint(pages: int | None, limit: int) -> str:
+    badge = page_badge(pages, limit)
+    if badge.endswith("OK"):
+        return tint(badge, _GREEN)
+    if badge.endswith("OVER"):
+        return tint(badge, _ORANGE)
+    return tint(badge, _COMMENT)
+
+
+def check_tint(check: str) -> str:
+    lowered = check.lower()
+    if "pass" in lowered:
+        return tint(check, _GREEN)
+    if "fail" in lowered:
+        return tint(check, _RED)
+    return tint(check, _COMMENT)
+
+
 def base_cv_lines(rows: list[VariantRow], index: int, checks: dict[str, str]) -> str:
     """Labeled rows for the dashboard. No block-drawing characters."""
     if not rows:
@@ -184,7 +208,7 @@ def base_cv_lines(rows: list[VariantRow], index: int, checks: dict[str, str]) ->
         lines.append(
             f"{mark} {cv_heading(row)}\n"
             f"    Language {language_name(row.lang)}    Length {length_name(row.length)}\n"
-            f"    Pages {page_badge(row.pages, row.limit)}    Check {check}"
+            f"    Pages {page_tint(row.pages, row.limit)}    Check {check_tint(check)}"
         )
     return "\n".join(lines)
 
@@ -199,13 +223,13 @@ def base_cv_details(row: VariantRow, check: str) -> str:
             "A base CV is one Markdown file, in one language and one length.",
             "",
             "Markdown",
-            str(row.markdown.resolve()),
+            friendly_path(row.markdown),
             "DOCX",
-            str(row.docx.resolve()),
+            friendly_path(row.docx),
             "PDF",
-            str(row.pdf.resolve()),
+            friendly_path(row.pdf),
             f"Built file  {built}",
-            f"Check  {check}",
+            f"Check  {check_tint(check)}",
         ]
     )
 

@@ -48,6 +48,7 @@ from cvgen.onboard import (
 )
 from cvgen.providers.base import ProviderName
 from cvgen.tailor import run_tailor
+from cvgen.util import CYAN, GREEN, ORANGE, PINK, YELLOW, friendly_path, tint
 from cvgen.tui import (
     base_cv_details,
     base_cv_lines,
@@ -430,20 +431,30 @@ class TailorModal(ModalScreen[None]):
         if self._args["preview"]:
             where = self._prompt_path or app.model.config.tailored_dir
             self._copy_target = self._prompt_path
+            shown = friendly_path(where) if isinstance(where, Path) else str(where)
             summary = (
                 "Preview only. No AI was called.\n\n"
-                f"Prompt\n{where}\n\n"
+                f"Prompt\n{shown}\n\n"
                 "The file is under out/tailored/. "
                 "Turn off preview under Advanced, then press Generate CV to call the model."
             )
         elif self._item is not None:
             self._copy_target = self._item.pdf
+            percent = self._item.percent
+            if percent >= 70:
+                score_color = GREEN
+            elif percent >= 40:
+                score_color = YELLOW
+            else:
+                score_color = ORANGE
             summary = (
-                f"{self._item.percent}% match\n"
-                f"Met {self._item.met}    Partial {self._item.partial}    Missing {self._item.missing}\n\n"
-                f"PDF\n{self._item.pdf}\n\n"
-                f"DOCX\n{self._item.docx}\n\n"
-                f"Report\n{self._item.report}\n\n"
+                f"{tint(f'{percent}% match', score_color)}\n"
+                f"{tint(f'Met {self._item.met}', GREEN)}    "
+                f"{tint(f'Partial {self._item.partial}', YELLOW)}    "
+                f"{tint(f'Missing {self._item.missing}', PINK)}\n\n"
+                f"PDF\n{friendly_path(self._item.pdf)}\n\n"
+                f"DOCX\n{friendly_path(self._item.docx)}\n\n"
+                f"Report\n{friendly_path(self._item.report)}\n\n"
                 "Saved under out/tailored/."
             )
         else:
@@ -708,11 +719,11 @@ class FileModal(ModalScreen[None]):
                 f"Met {item.met}    Partial {item.partial}    Missing {item.missing}",
                 "",
                 "PDF",
-                str(item.pdf),
+                friendly_path(item.pdf),
                 "DOCX",
-                str(item.docx),
+                friendly_path(item.docx),
                 "Report",
-                str(item.report),
+                friendly_path(item.report),
             ]
         )
         with Vertical(id="dialog"):
@@ -1004,7 +1015,8 @@ class CvgenApp(App[int]):
         for index, item in enumerate(MENU):
             key = shortcut_for(item.action, self.model.config)
             marker = ">" if index == self.menu_index else " "
-            lines.append(f" {marker} {item.title:<22}{key:>12}")
+            shown = tint(marker, PINK) if marker == ">" else marker
+            lines.append(f" {shown} {item.title:<22}{tint(f'{key:>12}', CYAN)}")
         return "\n".join(lines)
 
     def reload(self) -> None:
