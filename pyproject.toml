@@ -27,7 +27,8 @@ dependencies = ["python-docx>=1.1.2"]
 openai = ["openai>=1.40"]
 anthropic = ["anthropic>=0.39"]
 gemini = ["google-genai>=1.0"]
-dev = ["pytest>=8"]
+ui = ["textual>=8.2,<9"]
+dev = ["pytest>=8", "textual>=8.2,<9"]
 all = ["openai>=1.40", "anthropic>=0.39", "google-genai>=1.0"]
 
 [project.scripts]
@@ -37,7 +38,7 @@ cvgen = "cvgen.cli:app"
 where = ["src"]
 
 [tool.setuptools.package-data]
-cvgen = ["py.typed", "templates/*", "vendor/*"]
+cvgen = ["py.typed", "templates/*", "vendor/*", "ui/*.tcss"]
 
 [tool.setuptools.exclude-package-data]
 cvgen = ["vendor/node_modules*", "vendor/node_modules/**"]
