@@ -69,14 +69,18 @@ The start screen is centered, like the Grok Build CLI: a braille logo, a short m
    Quit                 ctrl+q
 
  ╭──────────────────────────────────────────────╮
- │ >  /tailor jobs/posting.txt            cvgen │
+ │ >  Paste a job URL or posting text     cvgen │
  ╰──────────────────────────────────────────────╯
                                               0.1.0
 ```
 
-Type `/` for suggestions, or press `ctrl+p` for the command palette. `/tailor jobs/role.txt` opens the tailor dialog with that file. A path without a slash does the same.
+Paste a job URL, a file path, or the posting text and press Enter. An empty prompt only reminds you what to paste. Type `/` for suggestions, or press `ctrl+p` for the command palette. `/tailor jobs/role.txt` opens the form with that file.
 
-`ctrl+d` opens the dashboard. The variant table and page meters sit on the left. The latest check and the match scores for each tailored CV (`met`, `partial`, `missing`) sit on the right. `j` and `k` move, `b` builds the row, `v` checks it, `t` opens the tailor dialog, and `esc` returns. Build and verify results open in a popup. The first-run folder setup is that same dialog, step by step. Shortcuts can be aliased in `cvgen.toml` under `[ui.keys]`, for example `build_all = "f2"`.
+The form asks which job (a saved file under `jobs/`, or a pasted URL or text), then language and length: Spanish or English, Short (1 page) or Extended (2 pages). Provider, model, and preview-only are under Advanced. Preview is off until you turn it on. Generate CV shows the steps Reading job, Asking AI, Verifying facts, and Building PDF. When it finishes, a popup shows the match percent, met / partial / missing, and the absolute paths of the PDF, DOCX, and report. A bare filename from the saved-job list is opened from `jobs/`, not from the current directory.
+
+A job URL is downloaded and saved as `jobs/<slug>.txt`. A public LinkedIn URL is read from the guest job endpoint when the site allows it. If the page is behind a login, paste the posting text instead.
+
+`ctrl+d` opens the dashboard. Base CVs are one Markdown file each, in one language and one length. The list shows language, length, and pages used. The details pane shows the absolute path of the Markdown, DOCX, and PDF. Tailored CVs show the job name, the date, the match percent, and met / partial / missing. `n` adds a base CV (`cvgen variant add` does the same). `j` and `k` move, `b` builds the row, `v` checks it, `tab` switches to the tailored list, `enter` opens its report, and `esc` returns. Shortcuts can be aliased in `cvgen.toml` under `[ui.keys]`, for example `build_all = "f2"`.
 
 Without a terminal, `cvgen` prints the command help. `cvgen init`, `cvgen build`, `cvgen verify`, and `cvgen tailor` stay non-interactive.
 
@@ -91,12 +95,12 @@ cvgen tailor --job jobs/lumenfield-backend.txt --lang en --length short --dry-ru
 
 `cvgen init` writes:
 
-- `cvgen.toml` — paths, page limits, the AI provider and per-variant keyword rules
+- `cvgen.toml` — paths, page limits, the AI provider and per-base-CV keyword rules
 - `source/consolidated.md` — the only facts the example CVs are allowed to use
 - `cv/avery-quinn-{short,extended}-{en,es}.md` — four base CVs
 - `jobs/lumenfield-backend.txt` — a fictional posting used by `tailor`
 
-`cvgen build` with no arguments renders every variant in `cvgen.toml` into `out/`. `cvgen verify` checks those Markdown files (and a sibling or built PDF, when one exists).
+`cvgen build` with no arguments renders every base CV in `cvgen.toml` into `out/`. `cvgen verify` checks those Markdown files (and a sibling or built PDF, when one exists). `cvgen variant add --name "Short English" --lang en --length short` adds another one. A custom length needs `--max-pages`.
 
 ## Markdown
 
@@ -238,7 +242,7 @@ cvgen verify
 cvgen tailor --job jobs/lumenfield-backend.txt --lang es --length short --dry-run
 ```
 
-En una terminal, `cvgen` abre una pantalla con la paleta Dracula. Hace falta el extra de interfaz: `pipx install '.[ui]'`. La primera vista es un menú centrado, con el atajo a la derecha y un prompt abajo (`/tailor jobs/archivo.txt`, o `ctrl+p` para la paleta). `ctrl+d` abre el tablero: variantes y medidores de página, el último chequeo y el encaje de cada CV adaptado (cumplido, parcial, faltante). Generar y verificar muestran el resultado en un cuadro. Si no hay workspace, un diálogo crea `source/`, `cv/`, `jobs/` y `out/`. Sin terminal, `cvgen` imprime la ayuda. `cvgen init`, `build`, `verify` y `tailor` siguen siendo comandos directos.
+En una terminal, `cvgen` abre una pantalla con la paleta Dracula. Hace falta el extra de interfaz: `pipx install '.[ui]'`. Pega una URL, una ruta o el texto de la vacante y pulsa Enter. El formulario pregunta la vacante, el idioma (español o inglés) y la extensión (corta, 1 página, o extendida, 2 páginas). Generar CV muestra los pasos y, al terminar, el porcentaje de encaje y las rutas absolutas del PDF, DOCX e informe. Una URL se guarda en `jobs/`. Si la página pide login, pega el texto. `ctrl+d` abre el tablero de CVs base (un Markdown, un idioma y una extensión) con sus rutas, y la lista de CVs adaptados. `cvgen variant add` crea un CV base. Sin terminal, `cvgen` imprime la ayuda. `cvgen init`, `build`, `verify` y `tailor` siguen siendo comandos directos.
 
 `cvgen init` crea un ejemplo con una persona ficticia, Avery Quinn, y empresas ficticias. `short` debe caber en una página y `extended` en dos. Si el texto no cabe, el programa reduce la letra hasta un mínimo (9 pt en la versión corta, 9,5 pt en la extendida) y, si aún se pasa, termina con error para que recortes el Markdown.
 

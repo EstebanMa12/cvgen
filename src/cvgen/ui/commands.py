@@ -8,9 +8,13 @@ from __future__ import annotations
 
 import tomllib
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from cvgen.config import Config
+
+_BOGOTA = ZoneInfo("America/Bogota")
 
 DEFAULT_KEYS: dict[str, str] = {
     "build_all": "ctrl+b",
@@ -34,10 +38,10 @@ class MenuItem:
 
 
 MENU: tuple[MenuItem, ...] = (
-    MenuItem("build_all", "Build all", "/build", "Render every variant"),
-    MenuItem("verify_all", "Verify all", "/verify", "Fact-check every variant"),
+    MenuItem("build_all", "Build all", "/build", "Render every base CV"),
+    MenuItem("verify_all", "Verify all", "/verify", "Fact-check every base CV"),
     MenuItem("tailor", "Tailor to a job", "/tailor", "Pick a posting and write a CV"),
-    MenuItem("dashboard", "Dashboard", "/dashboard", "Variants, checks, and match scores"),
+    MenuItem("dashboard", "Dashboard", "/dashboard", "Base CVs, checks, and matches"),
     MenuItem("new_workspace", "New workspace", "/new", "Create source, cv, jobs, and out"),
     MenuItem("quit", "Quit", "/quit", "Leave the screen"),
 )
@@ -72,13 +76,13 @@ class PromptAction:
 def parse_prompt(text: str) -> PromptAction:
     """Turn the bottom prompt into an action.
 
-    An empty prompt activates the highlighted menu row. A path without a
-    slash opens tailor for that file. ``/tailor jobs/x.txt`` does the same
+    An empty prompt asks what to paste. A URL, a path, or posting text
+    without a slash opens tailor. ``/tailor jobs/x.txt`` does the same
     with an explicit command.
     """
     raw = text.strip()
     if not raw:
-        return PromptAction("selected")
+        return PromptAction("hint")
     if not raw.startswith("/"):
         return PromptAction("tailor", raw)
     body = raw[1:].strip()
@@ -152,12 +156,80 @@ def parse_report(text: str) -> tuple[int, int, int]:
     return counts["met"], counts["partial"], counts["missing"]
 
 
-def tailored_reports(config: Config) -> list[tuple[str, int, int, int]]:
+@dataclass(frozen=True)
+class TailoredItem:
+    title: str
+    when: str
+    met: int
+    partial: int
+    missing: int
+    percent: int
+    report: Path
+    pdf: Path
+    docx: Path
+
+
+def _report_title(text: str, stem: str) -> str:
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("# "):
+            continue
+        title = stripped[2:].strip()
+        for prefix in ("Match report — ", "Match report - ", "Match report: "):
+            if title.startswith(prefix):
+                title = title[len(prefix) :].strip()
+        return title or stem
+    return stem.replace("-", " ")
+
+
+def _match_percent(met: int, partial: int, missing: int) -> int:
+    total = met + partial + missing
+    if total == 0:
+        return 0
+    return round(100 * met / total)
+
+
+def list_tailored(config: Config) -> list[TailoredItem]:
     directory = config.tailored_dir
     if not directory.is_dir():
         return []
-    found: list[tuple[str, int, int, int]] = []
-    for path in sorted(directory.glob("*-report.md"), key=lambda item: item.stat().st_mtime):
-        met, partial, missing = parse_report(path.read_text(encoding="utf-8"))
-        found.append((path.name.removesuffix(".md"), met, partial, missing))
+    found: list[TailoredItem] = []
+    reports = sorted(directory.glob("*-report.md"), key=lambda item: item.stat().st_mtime)
+    for path in reports:
+        body = path.read_text(encoding="utf-8")
+        met, partial, missing = parse_report(body)
+        stem = path.name.removesuffix("-report.md")
+        cv = path.with_name(f"{stem}.md")
+        stamp = datetime.fromtimestamp(path.stat().st_mtime, _BOGOTA)
+        found.append(
+            TailoredItem(
+                title=_report_title(body, stem),
+                when=stamp.strftime("%d %b %Y %H:%M"),
+                met=met,
+                partial=partial,
+                missing=missing,
+                percent=_match_percent(met, partial, missing),
+                report=path.resolve(),
+                pdf=cv.with_suffix(".pdf").resolve(),
+                docx=cv.with_suffix(".docx").resolve(),
+            )
+        )
     return found
+
+
+def format_tailored(items: list[TailoredItem], index: int) -> str:
+    if not items:
+        return "Paste a job link to create a tailored CV."
+    lines: list[str] = []
+    for position, item in enumerate(items):
+        mark = ">" if position == index else " "
+        lines.append(
+            f"{mark} {item.title}\n"
+            f"    {item.when}    {item.percent}% match"
+            f"    met {item.met}  partial {item.partial}  missing {item.missing}"
+        )
+    return "\n".join(lines)
+
+
+def tailored_reports(config: Config) -> list[tuple[str, int, int, int]]:
+    return [(item.title, item.met, item.partial, item.missing) for item in list_tailored(config)]

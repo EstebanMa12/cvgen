@@ -139,13 +139,85 @@ ModalScreen {
     background: #1e1f29;
     border: round #bd93f9;
     padding: 1 2;
+    overflow-y: auto;
 }
 
-#dialog-title {
+#dialog.tailor-dialog {
+    height: 90%;
+    overflow-y: hidden;
+}
+
+#dialog-title, #result-title, #error-title {
     color: #ff79c6;
     text-style: bold;
     height: 1;
     margin-bottom: 1;
+}
+
+.step-label {
+    color: #bd93f9;
+    text-style: bold;
+    height: 1;
+    margin-top: 1;
+}
+
+#job-help, #using, #hint {
+    color: #6272a4;
+    height: auto;
+}
+
+#hint {
+    height: 1;
+    text-align: center;
+}
+
+#actions {
+    height: 3;
+    margin-top: 1;
+}
+
+#generate {
+    width: 1fr;
+}
+
+#form {
+    height: 1fr;
+}
+
+#fields {
+    height: 1fr;
+    overflow-y: auto;
+}
+
+#progress, #result, #error-box {
+    height: auto;
+}
+
+#stage-list, #summary, #error-text, #file-body {
+    height: auto;
+}
+
+#spinner {
+    height: 1;
+    color: #bd93f9;
+}
+
+#dash-help {
+    height: 1;
+    color: #ff79c6;
+    background: #1e1f29;
+    padding: 0 1;
+}
+
+RadioSet {
+    height: auto;
+    margin-bottom: 1;
+    background: #1e1f29;
+}
+
+RadioButton {
+    height: 1;
+    background: #1e1f29;
 }
 
 #dialog-hint {
@@ -154,7 +226,7 @@ ModalScreen {
 }
 
 #log {
-    height: 12;
+    height: 8;
     border: round #44475a;
     background: #282a36;
 }
@@ -186,7 +258,7 @@ Select {
 }
 
 #jobs {
-    height: 6;
+    height: 5;
     border: round #44475a;
     background: #282a36;
     margin-bottom: 1;

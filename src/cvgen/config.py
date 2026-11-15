@@ -36,6 +36,7 @@ class Variant:
     output_name: str
     length: str
     lang: str
+    max_pages: int | None = None
 
 
 @dataclass
@@ -206,8 +207,13 @@ def load_config(path: Path) -> Config:
         seen.add(variant_id)
         length = str(raw.get("length") or "")
         lang = str(raw.get("lang") or "")
-        if length not in PAGE_LIMITS:
-            raise ConfigError(f"Variant {variant_id!r} length must be 'short' or 'extended'.")
+        max_pages = raw.get("max_pages")
+        if max_pages is not None and (isinstance(max_pages, bool) or not isinstance(max_pages, int) or max_pages < 1):
+            raise ConfigError(f"Variant {variant_id!r} max_pages must be an integer of 1 or more.")
+        if length not in PAGE_LIMITS and max_pages is None:
+            raise ConfigError(
+                f"Variant {variant_id!r} length must be short, extended, or a custom label with max_pages."
+            )
         if lang not in {"es", "en"}:
             raise ConfigError(f"Variant {variant_id!r} lang must be 'es' or 'en'.")
         output_name = str(raw.get("output") or f"{variant_id}.docx")
@@ -220,6 +226,7 @@ def load_config(path: Path) -> Config:
                 output_name=output_name,
                 length=length,
                 lang=lang,
+                max_pages=max_pages,
             )
         )
     return config
