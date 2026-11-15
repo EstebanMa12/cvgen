@@ -253,8 +253,13 @@ def verify_one(
         warnings.extend(f"comment (not rendered): {comment.strip()}" for comment in comments)
 
     pages = sibling_pdf_pages(path, config)
-    if pages is not None and length and pages > config.page_limits[length]:
-        keywords.append(f"PDF has {pages} pages (max {config.page_limits[length]})")
+    limit = None
+    if variant is not None and variant.max_pages:
+        limit = variant.max_pages
+    elif length in config.page_limits:
+        limit = config.page_limits[length]
+    if pages is not None and limit is not None and pages > limit:
+        keywords.append(f"PDF has {pages} pages (max {limit})")
 
     label = f"{length or '?'}-{lang}" + (" canonical" if canonical else "")
     return VerifyResult(

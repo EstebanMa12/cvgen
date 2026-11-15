@@ -18,6 +18,17 @@ class BuildJob:
     markdown: Path
     docx: Path
     length: str
+    max_pages: int | None = None
+
+
+def resolve_profile(length: str, max_pages: int | None, page_limits: dict[str, int]) -> tuple[str, int]:
+    """Style key and page limit. Custom lengths use the short or extended look."""
+    if length in STYLES:
+        limit = max_pages if max_pages is not None else page_limits[length]
+        return length, limit
+    if max_pages is None or max_pages < 1:
+        raise ConfigError(f"Length {length!r} needs max_pages of 1 or more.")
+    return ("short" if max_pages == 1 else "extended"), max_pages
 
 
 def infer_length(path: Path) -> str:
@@ -36,10 +47,8 @@ def build_one(
 ) -> bool:
     """Render one CV. Return False when the page limit is missed or PDF export fails."""
     model = parse_markdown_file(job.markdown)
-    if job.length not in STYLES:
-        raise ConfigError(f"Unknown length {job.length!r}. Expected 'short' or 'extended'.")
-    style = dict(STYLES[job.length])
-    limit = config.page_limits[job.length]
+    style_key, limit = resolve_profile(job.length, job.max_pages, config.page_limits)
+    style = dict(STYLES[style_key])
     root = config.root
 
     def measure(current: dict[str, float]) -> int:
@@ -67,7 +76,7 @@ def build_one(
             print(f"Generated: {display_path(job.docx, root)}")
             return True
         if autofit:
-            result = fit_style(style, job.length, measure, limit=limit)
+            result = fit_style(style, style_key, measure, limit=limit)
         else:
             pages = measure(style)
             result = FitResult(style=style, pages=pages, steps=0, ok=pages <= limit)
@@ -122,6 +131,7 @@ def resolve_jobs(variants: list[str], explicit_input: Path | None, explicit_outp
                 variant.input_path,
                 config.output_dir / variant.output_name,
                 length or variant.length,
+                None if length else variant.max_pages,
             )
         )
     return jobs

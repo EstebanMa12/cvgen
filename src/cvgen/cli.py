@@ -14,6 +14,7 @@ from cvgen.scaffold import init_workspace
 from cvgen.tailor import run_tailor
 from cvgen.tui import launch
 from cvgen.util import display_path
+from cvgen.variants import add_base_cv
 from cvgen.verify import verify_paths
 
 
@@ -83,6 +84,16 @@ def build_parser() -> argparse.ArgumentParser:
     tailor.add_argument("--no-generate", action="store_true", help="write Markdown and the match report, then stop")
     tailor.add_argument("--source", type=Path, help="consolidated source (default: paths.source)")
     tailor.add_argument("--template", type=Path, help="base CV to adapt (default: the matching variant)")
+
+    variant = sub.add_parser("variant", help="manage base CVs (one Markdown file, one language, one length)")
+    variant_sub = variant.add_subparsers(dest="variant_command", required=True)
+    add = variant_sub.add_parser("add", help="add a base CV and append it to cvgen.toml")
+    add.add_argument("--name", required=True, help="label, such as 'Short English'")
+    add.add_argument("--lang", choices=("es", "en"), required=True)
+    add.add_argument("--length", default="short", help="short, extended, or a custom label")
+    add.add_argument("--max-pages", type=int, help="page limit (required for a custom length)")
+    add.add_argument("--copy-from", help="id of an existing base CV to copy")
+    add.add_argument("--blank", action="store_true", help="start from a blank profile instead of a copy")
     return parser
 
 
@@ -163,6 +174,26 @@ def _cmd_tailor(args: argparse.Namespace, config_path: Path | None) -> int:
     )
 
 
+def _cmd_variant(args: argparse.Namespace, config_path: Path | None) -> int:
+    if args.variant_command != "add":
+        print(f"ERROR: unknown variant command {args.variant_command!r}", file=sys.stderr)
+        return 2
+    config = load_workspace(config_path)
+    blank = args.blank or not args.copy_from
+    path = add_base_cv(
+        config,
+        name=args.name,
+        lang=args.lang,
+        length=args.length,
+        max_pages=args.max_pages,
+        copy_from=args.copy_from,
+        blank=blank,
+    )
+    print(f"Added base CV {path}")
+    print("It is one Markdown file, in one language and one length.")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     raw = list(sys.argv[1:] if argv is None else argv)
     if "--version" in raw:
@@ -192,6 +223,8 @@ def main(argv: list[str] | None = None) -> int:
             return _cmd_verify(args, config_path)
         if args.command == "tailor":
             return _cmd_tailor(args, config_path)
+        if args.command == "variant":
+            return _cmd_variant(args, config_path)
     except ConfigError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1

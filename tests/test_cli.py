@@ -83,3 +83,27 @@ def test_config_rejects_api_keys(tmp_path: Path):
 
 def test_version():
     assert main(["--version"]) == 0
+
+
+def test_variant_add_writes_a_base_cv(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.chdir(tmp_path)
+    assert main(["init"]) == 0
+    code = main(["variant", "add", "--name", "Brief English", "--lang", "en", "--length", "short", "--blank"])
+    assert code == 0
+    created = tmp_path / "cv" / "brief-english.md"
+    assert created.is_file()
+    text = (tmp_path / "cvgen.toml").read_text(encoding="utf-8")
+    assert 'id = "brief-english"' in text
+    assert 'lang = "en"' in text
+    config = load_config(tmp_path / "cvgen.toml")
+    added = next(variant for variant in config.variants if variant.id == "brief-english")
+    assert added.length == "short"
+    assert added.lang == "en"
+    code = main(
+        ["variant", "add", "--name", "One pager", "--lang", "es", "--length", "one-pager", "--max-pages", "1", "--blank"]
+    )
+    assert code == 0
+    custom = load_config(tmp_path / "cvgen.toml")
+    one = next(variant for variant in custom.variants if variant.id == "one-pager")
+    assert one.max_pages == 1
+    assert one.lang == "es"

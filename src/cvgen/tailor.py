@@ -5,9 +5,8 @@ from __future__ import annotations
 import os
 import re
 import unicodedata
-import urllib.error
 import urllib.parse
-import urllib.request
+from collections.abc import Callable
 from pathlib import Path
 
 from cvgen.build import BuildJob, build_one, soffice_available
@@ -58,40 +57,35 @@ def html_to_text(html: str) -> str:
     return text.strip()
 
 
-def load_job(job: str) -> str:
-    if re.match(r"https?://", job, flags=re.IGNORECASE):
-        return _load_job_url(job)
-    path = Path(job)
-    if not path.is_absolute():
-        path = Path.cwd() / path
-    if not path.is_file():
+def load_job(job: str, *, root: Path | None = None) -> str:
+    """Read a posting from a file, a URL, or pasted text.
+
+    A bare filename is resolved under ``root/jobs`` before the current directory.
+    URLs are downloaded and saved into that jobs folder.
+    """
+    # Lazy import: cvgen.jobs imports slug helpers from this module at import time.
+    from cvgen.jobs import classify_job_input, fetch_posting, posting_slug, resolve_saved_job, save_posting
+
+    base = (root or Path.cwd()).resolve()
+    kind = classify_job_input(job)
+    if kind == "url":
+        text = fetch_posting(job.strip())
+        saved = save_posting(base / "jobs", posting_slug(job), text)
+        return f"Saved copy: {saved}\n{text}"
+    if kind == "pasted":
+        body = job.strip()
+        save_posting(base / "jobs", posting_slug(body), body)
+        return body
+    if kind == "empty":
+        raise ConfigError("No job was given. Pass a file, a URL, or the posting text.")
+    found = resolve_saved_job(job, base)
+    if found is None:
         raise ConfigError(
             f"Job file not found: {job}. "
-            "If the posting is behind a login, save the text to a file and pass that path."
+            "Looked in the workspace and in the jobs folder. "
+            "Paste a URL, or paste the full posting text."
         )
-    return path.read_text(encoding="utf-8")
-
-
-def _load_job_url(url: str) -> str:
-    request = urllib.request.Request(url, headers={"User-Agent": "cvgen"})
-    try:
-        with urllib.request.urlopen(request, timeout=30) as response:
-            raw = response.read().decode("utf-8", errors="replace")
-    except urllib.error.HTTPError as exc:
-        raise ConfigError(
-            f"Could not fetch {url}: HTTP {exc.code}. Save the posting to a text file and pass that instead."
-        ) from exc
-    except urllib.error.URLError as exc:
-        raise ConfigError(
-            f"Could not fetch {url}: {exc.reason}. Save the posting to a text file and pass that instead."
-        ) from exc
-    text = html_to_text(raw)
-    if len(text) < 200:
-        raise ConfigError(
-            f"The page at {url} returned too little text. It may require a login. "
-            "Save the posting to a text file and pass that instead."
-        )
-    return f"Source URL: {url}\n\n{text[:20000]}"
+    return found.read_text(encoding="utf-8")
 
 
 def default_slug(job: str) -> str:
@@ -284,14 +278,21 @@ def run_tailor(
     generate: bool,
     source_path: Path | None,
     template_path: Path | None,
+    on_stage: Callable[[str], None] | None = None,
 ) -> int:
+    def stage(message: str) -> None:
+        print(message)
+        if on_stage is not None:
+            on_stage(message)
+
     provider = canonicalize(provider_flag or config.provider)
     model = select_model(provider, config, model_flag, provider_flag)
     base_url = base_url_flag or config.base_url
     if provider == "ollama" and not base_url:
         base_url = DEFAULT_BASE_URLS["ollama"]
 
-    job_text = load_job(job)
+    stage("Reading the job")
+    job_text = load_job(job, root=config.root)
     source_file, source = _read_source(config, source_path)
     template_file = _pick_template(config, lang, length, template_path)
     template = template_file.read_text(encoding="utf-8")
@@ -318,8 +319,9 @@ def run_tailor(
     prompt_path = tailored_dir / f"{stem}.prompt.md"
 
     if dry_run:
+        stage("Writing the prompt")
         prompt_path.write_text(prompt, encoding="utf-8")
-        print("DRY RUN — no API call.")
+        print("Preview only. No model was called.")
         print(f"  provider: {provider}")
         print(f"  model: {model}")
         print(f"  source: {display_path(source_file, config.root)}")
@@ -329,6 +331,7 @@ def run_tailor(
         print(f"  {key_status(provider, config.api_key_env)}")
         return 0
 
+    stage("Asking the model")
     print(f"Tailoring {stem} with {provider} ({model})...")
     answer = run_completion(
         provider,
@@ -354,6 +357,7 @@ def run_tailor(
     if not generate:
         return 0
 
+    stage("Checking the facts")
     ok, verify_output = verify_paths([cv_path], source, config)
     print(verify_output)
     if not ok:
@@ -384,6 +388,7 @@ def run_tailor(
             print(f"ERROR: fact check still failing. Review {display_path(cv_path, config.root)}.")
             return 3
 
+    stage("Building the document")
     make_pdf = soffice_available()
     if not make_pdf:
         print("WARNING: LibreOffice (soffice) was not found — writing the DOCX and skipping PDF export.")

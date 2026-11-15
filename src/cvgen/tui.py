@@ -90,7 +90,7 @@ def collect_rows(config: Config) -> list[VariantRow]:
                 id=variant.id,
                 lang=variant.lang,
                 length=variant.length,
-                limit=config.page_limits[variant.length],
+                limit=variant.max_pages or config.page_limits.get(variant.length, 2),
                 markdown=variant.input_path,
                 docx=docx,
                 pdf=pdf,
@@ -143,6 +143,71 @@ def table_line(row: VariantRow, selected: bool) -> str:
     pdf = "yes" if row.pages is not None else "no"
     name = row.id if row.markdown_ok else f"{row.id} !"
     return f" {marker} {name:<16} {row.lang:<4} {row.length:<9} {docx:<4} {pdf:<4} {meter} {pages:>5} "
+
+
+def language_name(lang: str) -> str:
+    if lang == "es":
+        return "Spanish"
+    if lang == "en":
+        return "English"
+    return lang
+
+
+def length_name(length: str) -> str:
+    if length == "short":
+        return "Short"
+    if length == "extended":
+        return "Extended"
+    return length.replace("-", " ").title()
+
+
+def cv_heading(row: VariantRow) -> str:
+    return f"{length_name(row.length)} · {language_name(row.lang)}"
+
+
+def page_badge(pages: int | None, limit: int) -> str:
+    if pages is None:
+        return "not built"
+    if pages > limit:
+        return f"{pages}/{limit} OVER"
+    return f"{pages}/{limit} OK"
+
+
+def base_cv_lines(rows: list[VariantRow], index: int, checks: dict[str, str]) -> str:
+    """Labeled rows for the dashboard. No block-drawing characters."""
+    if not rows:
+        return "No base CVs yet. Press n to add one."
+    lines: list[str] = []
+    for position, row in enumerate(rows):
+        mark = ">" if position == index else " "
+        check = checks.get(row.id, "not checked")
+        lines.append(
+            f"{mark} {cv_heading(row)}\n"
+            f"    Language {language_name(row.lang)}    Length {length_name(row.length)}\n"
+            f"    Pages {page_badge(row.pages, row.limit)}    Check {check}"
+        )
+    return "\n".join(lines)
+
+
+def base_cv_details(row: VariantRow, check: str) -> str:
+    built = "not yet"
+    if row.docx.is_file():
+        built = row.docx.resolve().name
+    return "\n".join(
+        [
+            cv_heading(row),
+            "A base CV is one Markdown file, in one language and one length.",
+            "",
+            "Markdown",
+            str(row.markdown.resolve()),
+            "DOCX",
+            str(row.docx.resolve()),
+            "PDF",
+            str(row.pdf.resolve()),
+            f"Built file  {built}",
+            f"Check  {check}",
+        ]
+    )
 
 
 def meter_line(row: VariantRow, selected: bool) -> str:
@@ -203,7 +268,7 @@ def perform_build(
             print(f"Missing Markdown: {row.markdown}")
             ok = False
             continue
-        job = BuildJob(row.markdown, row.docx, row.length)
+        job = BuildJob(row.markdown, row.docx, row.length, max_pages=row.limit)
         ok = build_one(job, config, make_pdf=make_pdf, autofit=True) and ok
     print("\nBuild finished." if ok else "\nBuild reported a problem.")
     return 0 if ok else 1
