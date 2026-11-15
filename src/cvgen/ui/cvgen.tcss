@@ -1,0 +1,193 @@
+/* Dracula. Background #282a36, purple #bd93f9, pink #ff79c6, cyan #8be9fd. */
+
+Screen {
+    background: #282a36;
+    color: #f8f8f2;
+}
+
+#stage {
+    height: 1fr;
+    align: center middle;
+}
+
+#logo {
+    color: #bd93f9;
+    text-align: center;
+    height: auto;
+    margin-bottom: 1;
+}
+
+#who {
+    color: #6272a4;
+    text-align: center;
+    height: 1;
+    margin-bottom: 1;
+}
+
+#menu {
+    width: 44;
+    height: auto;
+}
+
+#suggestions {
+    display: none;
+    height: auto;
+    max-height: 9;
+    margin: 0 2 0 2;
+    background: #1e1f29;
+    border: round #6272a4;
+    padding: 0 1;
+}
+
+#suggestions.visible {
+    display: block;
+}
+
+#prompt-wrap {
+    height: 3;
+    margin: 0 1 0 1;
+    border: round #44475a;
+    background: #282a36;
+}
+
+#prompt-wrap:focus-within {
+    border: round #bd93f9;
+}
+
+#chevron {
+    width: 2;
+    color: #ff79c6;
+    content-align: center middle;
+}
+
+#prompt {
+    border: none;
+    background: #282a36;
+    height: 1;
+}
+
+#brand {
+    width: 8;
+    color: #6272a4;
+    content-align: right middle;
+}
+
+#version {
+    height: 1;
+    color: #6272a4;
+    text-align: right;
+    margin: 0 2 0 0;
+}
+
+#insight {
+    height: 1;
+    color: #8be9fd;
+    padding: 0 1;
+}
+
+#dash {
+    height: 1fr;
+    grid-size: 2 2;
+    grid-columns: 3fr 2fr;
+    grid-gutter: 1 1;
+    padding: 0 1;
+}
+
+#variants {
+    row-span: 2;
+}
+
+.panel {
+    border: round #44475a;
+    background: #282a36;
+    padding: 0 1;
+    height: 100%;
+}
+
+.panel-title {
+    color: #bd93f9;
+    text-style: bold;
+    height: 1;
+}
+
+.panel-body {
+    height: 1fr;
+}
+
+Footer {
+    background: #1e1f29;
+    color: #f8f8f2;
+}
+
+Footer .footer--key {
+    background: #bd93f9;
+    color: #282a36;
+}
+
+Footer .footer--description {
+    color: #ff79c6;
+}
+
+ModalScreen {
+    align: center middle;
+}
+
+#dialog {
+    width: 76;
+    max-height: 90%;
+    height: auto;
+    background: #1e1f29;
+    border: round #bd93f9;
+    padding: 1 2;
+}
+
+#dialog-title {
+    color: #ff79c6;
+    text-style: bold;
+    height: 1;
+    margin-bottom: 1;
+}
+
+#dialog-hint {
+    color: #6272a4;
+    height: 1;
+}
+
+#log {
+    height: 12;
+    border: round #44475a;
+    background: #282a36;
+}
+
+#report {
+    height: auto;
+    max-height: 16;
+    margin-top: 1;
+}
+
+#field {
+    margin-bottom: 1;
+}
+
+.row {
+    height: 3;
+}
+
+.hidden {
+    display: none;
+}
+
+Button {
+    margin-right: 1;
+}
+
+Select {
+    margin-bottom: 1;
+}
+
+#jobs {
+    height: 6;
+    border: round #44475a;
+    background: #282a36;
+    margin-bottom: 1;
+}

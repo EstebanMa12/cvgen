@@ -47,14 +47,38 @@ Page limits are 1 page for `short` and 2 pages for `extended`. If a CV overflows
 
 ## Quickstart
 
-In a terminal, `cvgen` with no subcommand opens an interactive screen in a Dracula palette (purple, pink and cyan on a dark background). The bottom bar keeps the keys visible, in the same way htop keeps F1–F10 on screen. If the directory is not a workspace yet, the screen walks through creating `source/`, `cv/`, `jobs/` and `out/` before the table appears.
+In a terminal, `cvgen` opens a Dracula-colored screen (purple, pink, and cyan on `#282a36`). The base install stays limited to `python-docx`. The screen itself is the `ui` extra:
 
-```text
-F1 Help   F2 Init   F5 Build   F6 Verify   F7 Tailor   F10 Quit
-j/k move    Enter build    B build all    v verify    V verify all    r refresh    q quit
+```bash
+pipx install '.[ui]'
+cvgen
 ```
 
-Up and down move through the variants. The meters show how much of the page budget each PDF is using. F7 asks for a job file: Enter writes the prompt without calling a provider, and F5 runs the provider.
+The start screen is centered, like the Grok Build CLI: a braille logo, a short menu with the shortcut on the right, a rounded prompt along the bottom, and the version in the corner.
+
+```text
+        ⢀⣀⣤⣤⣀⡀
+     ⢀⣴⣿⣿⣿⣿⣿⣿⣦⡀
+           cvgen
+
+ > Build all            ctrl+b
+   Verify all           ctrl+y
+   Tailor to a job      ctrl+t
+   Dashboard            ctrl+d
+   New workspace        ctrl+n
+   Quit                 ctrl+q
+
+ ╭──────────────────────────────────────────────╮
+ │ >  /tailor jobs/posting.txt            cvgen │
+ ╰──────────────────────────────────────────────╯
+                                              0.1.0
+```
+
+Type `/` for suggestions, or press `ctrl+p` for the command palette. `/tailor jobs/role.txt` opens the tailor dialog with that file. A path without a slash does the same.
+
+`ctrl+d` opens the dashboard. The variant table and page meters sit on the left. The latest check and the match scores for each tailored CV (`met`, `partial`, `missing`) sit on the right. `j` and `k` move, `b` builds the row, `v` checks it, `t` opens the tailor dialog, and `esc` returns. Build and verify results open in a popup. The first-run folder setup is that same dialog, step by step. Shortcuts can be aliased in `cvgen.toml` under `[ui.keys]`, for example `build_all = "f2"`.
+
+Without a terminal, `cvgen` prints the command help. `cvgen init`, `cvgen build`, `cvgen verify`, and `cvgen tailor` stay non-interactive.
 
 The shell commands do the same work:
 
@@ -175,7 +199,7 @@ Tailor exit codes: `0` ok, `1` configuration or authentication, `2` the model fa
 ## Commands
 
 ```bash
-cvgen                  # interactive screen when stdin and stdout are a terminal
+cvgen                  # interactive screen (needs the ui extra and a terminal)
 cvgen ui
 cvgen init [--dir DIR] [--force]
 cvgen build [VARIANT ...] [--input FILE --output FILE] [--length short|extended] [--no-pdf] [--require-pdf] [--no-autofit]
@@ -214,7 +238,7 @@ cvgen verify
 cvgen tailor --job jobs/lumenfield-backend.txt --lang es --length short --dry-run
 ```
 
-En una terminal, `cvgen` sin argumentos abre una pantalla con colores de Dracula (morado, rosa y cian). Abajo quedan las teclas, al estilo de htop: `F1` ayuda, `F2` inicia las carpetas, `F5` genera, `F6` verifica, `F7` adapta a una vacante y `F10` sale. Si todavía no hay workspace, la pantalla guía la creación de `source/`, `cv/`, `jobs/` y `out/`: Enter avanza, Esc vuelve, y al final se elige el ejemplo de Avery Quinn o un CV en blanco con tu nombre. Las flechas (o `j`/`k`) mueven la selección. En el modo de vacante, Enter solo escribe el prompt y `F5` llama al proveedor.
+En una terminal, `cvgen` abre una pantalla con la paleta Dracula. Hace falta el extra de interfaz: `pipx install '.[ui]'`. La primera vista es un menú centrado, con el atajo a la derecha y un prompt abajo (`/tailor jobs/archivo.txt`, o `ctrl+p` para la paleta). `ctrl+d` abre el tablero: variantes y medidores de página, el último chequeo y el encaje de cada CV adaptado (cumplido, parcial, faltante). Generar y verificar muestran el resultado en un cuadro. Si no hay workspace, un diálogo crea `source/`, `cv/`, `jobs/` y `out/`. Sin terminal, `cvgen` imprime la ayuda. `cvgen init`, `build`, `verify` y `tailor` siguen siendo comandos directos.
 
 `cvgen init` crea un ejemplo con una persona ficticia, Avery Quinn, y empresas ficticias. `short` debe caber en una página y `extended` en dos. Si el texto no cabe, el programa reduce la letra hasta un mínimo (9 pt en la versión corta, 9,5 pt en la extendida) y, si aún se pasa, termina con error para que recortes el Markdown.
 
