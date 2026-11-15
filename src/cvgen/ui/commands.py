@@ -13,6 +13,12 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from cvgen.config import Config
+from cvgen.util import tint
+
+_GREEN = "#50fa7b"
+_YELLOW = "#f1fa8c"
+_ORANGE = "#ffb86c"
+_PINK = "#ff79c6"
 
 _BOGOTA = ZoneInfo("America/Bogota")
 
@@ -217,16 +223,27 @@ def list_tailored(config: Config) -> list[TailoredItem]:
     return found
 
 
+def _match_color(percent: int) -> str:
+    if percent >= 70:
+        return _GREEN
+    if percent >= 40:
+        return _YELLOW
+    return _ORANGE
+
+
 def format_tailored(items: list[TailoredItem], index: int) -> str:
     if not items:
         return "Paste a job link to create a tailored CV."
     lines: list[str] = []
     for position, item in enumerate(items):
         mark = ">" if position == index else " "
+        score = tint(f"{item.percent}%", _match_color(item.percent))
+        met = tint(f"met {item.met}", _GREEN)
+        partial = tint(f"partial {item.partial}", _YELLOW)
+        missing = tint(f"missing {item.missing}", _PINK)
         lines.append(
             f"{mark} {item.title}\n"
-            f"    {item.when}    {item.percent}% match"
-            f"    met {item.met}  partial {item.partial}  missing {item.missing}"
+            f"    {item.when}    {score} match    {met}  {partial}  {missing}"
         )
     return "\n".join(lines)
 

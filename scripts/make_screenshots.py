@@ -5,18 +5,30 @@ Uses only the fictional example from ``cvgen init`` (Avery Quinn, Northwind
 Labs, Harbor & Co., Lumenfield, and the other example names). No provider
 key is required: the tailor result is a prerecorded match report.
 
+The process clears ``NO_COLOR`` before Textual starts, otherwise the
+Dracula CSS is flattened to gray. PNG conversion embeds DejaVu Sans Mono
+and redraws the braille logo as filled dots, because Cairo paints U+2800
+as empty boxes once ``textLength`` is set.
+
     pip install '.[ui]' cairosvg
     python scripts/make_screenshots.py
-
-SVG files come from ``App.save_screenshot``. PNG copies are written beside
-them for the README.
 """
 
 from __future__ import annotations
 
+import os
+
+os.environ.pop("NO_COLOR", None)
+os.environ["FORCE_COLOR"] = "1"
+os.environ["TERM"] = "xterm-256color"
+os.environ["COLORTERM"] = "truecolor"
+os.environ["TEXTUAL_COLOR_SYSTEM"] = "truecolor"
+
 import asyncio
+import re
 import shutil
 import sys
+from html import unescape
 from pathlib import Path
 
 import cairosvg
@@ -29,11 +41,12 @@ from cvgen.ui.app import CvgenApp
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / "screenshots"
-DEMO = Path("/tmp/cv")
-EMPTY = Path("/tmp/cv-onboard")
-# Tall enough that the tailor form shows both length choices, and wide enough
-# that absolute paths fit on one line in the dashboard and the result popup.
+HOME = Path("/tmp/cvgen-home")
+os.environ["HOME"] = str(HOME)
+DEMO = HOME / "cv-workspace"
+EMPTY = HOME / "cv-new"
 SIZE = (148, 46)
+DEJAVU = Path("/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf")
 
 REPORT = """\
 # Match report — Lumenfield backend
@@ -50,6 +63,70 @@ REPORT = """\
 - Kubernetes
 - Oracle PL/SQL
 """
+
+
+_BRAILLE_DOTS = (
+    (0, 0, 0x01),
+    (0, 1, 0x02),
+    (0, 2, 0x04),
+    (1, 0, 0x08),
+    (1, 1, 0x10),
+    (1, 2, 0x20),
+    (0, 3, 0x40),
+    (1, 3, 0x80),
+)
+
+
+def _draw_braille(svg: str) -> str:
+    """Replace braille text with filled dots.
+
+    Cairo draws U+2800 from the usual monospace fonts as empty boxes, and
+    ``textLength`` makes a real braille font do the same. Dots keep the logo.
+    """
+
+    def repl(match: re.Match[str]) -> str:
+        tag, body = match.group(1), match.group(2)
+        raw = unescape(body)
+        if not any(0x2800 <= ord(char) <= 0x28FF for char in raw):
+            return match.group(0)
+        x_match = re.search(r'\bx="([^"]+)"', tag)
+        y_match = re.search(r'\by="([^"]+)"', tag)
+        length_match = re.search(r'textLength="([^"]+)"', tag)
+        if x_match is None or y_match is None:
+            return match.group(0)
+        origin_x = float(x_match.group(1))
+        baseline = float(y_match.group(1))
+        chars = list(raw)
+        width = float(length_match.group(1)) if length_match else 12.2 * len(chars)
+        cell = width / max(len(chars), 1)
+        fill = "#bd93f9"
+        class_match = re.search(r'class="([^"]+)"', tag)
+        if class_match:
+            rule = re.search(
+                rf"\.{re.escape(class_match.group(1))}\s*\{{[^}}]*fill:\s*(#[0-9A-Fa-f]+)",
+                svg,
+            )
+            if rule:
+                fill = rule.group(1)
+        radius = max(1.15, cell * 0.13)
+        circles: list[str] = []
+        for index, char in enumerate(chars):
+            code = ord(char)
+            if not 0x2800 <= code <= 0x28FF:
+                continue
+            bits = code - 0x2800
+            left = origin_x + index * cell
+            top = baseline - cell * 1.45
+            for column, row, bit in _BRAILLE_DOTS:
+                if bits & bit:
+                    cx = left + cell * (0.30 + column * 0.42)
+                    cy = top + cell * 0.36 * row + radius
+                    circles.append(
+                        f'<circle cx="{cx:.2f}" cy="{cy:.2f}" r="{radius:.2f}" fill="{fill}"/>'
+                    )
+        return "".join(circles)
+
+    return re.sub(r"(<text\b[^>]*>)(.*?)</text>", repl, svg, flags=re.DOTALL)
 
 
 def prepare_demo(root: Path) -> None:
@@ -87,16 +164,26 @@ def stub_tailor(config, **kwargs) -> int:
 
 
 def save(app: CvgenApp, name: str) -> Path:
-    """Write the Textual SVG, then a PNG that uses a font with box drawing and braille."""
+    """Write the Textual SVG, then a 2x PNG.
+
+    The PNG uses the installed DejaVu Sans Mono. A data-URI font plus
+    ``textLength`` makes Cairo drop box-drawing glyphs, so the braille logo
+    is drawn as filled dots instead.
+    """
     app.clear_notifications()
-    svg = Path(app.save_screenshot(f"{name}.svg", path=str(OUT)))
-    png = svg.with_suffix(".png")
-    text = svg.read_text(encoding="utf-8")
-    # Fira Code is referenced from a CDN and is not installed here. Cairo then
-    # drops box-drawing and braille. DejaVu Sans Mono is installed and has both.
-    text = text.replace("Fira Code, monospace", "DejaVu Sans Mono, monospace")
-    cairosvg.svg2png(bytestring=text.encode("utf-8"), write_to=str(png))
-    print(svg)
+    svg_path = Path(app.save_screenshot(f"{name}.svg", path=str(OUT)))
+    svg = svg_path.read_text(encoding="utf-8")
+    lowered = svg.lower()
+    if "282a36" not in lowered and "bd93f9" not in lowered and "1e1f29" not in lowered:
+        raise SystemExit(f"{name}.svg lost the Dracula colors. Is NO_COLOR set?")
+    styled = svg.replace(
+        "font-family: Fira Code, monospace;",
+        'font-family: "DejaVu Sans Mono", monospace;',
+    )
+    styled = _draw_braille(styled)
+    png = svg_path.with_suffix(".png")
+    cairosvg.svg2png(bytestring=styled.encode("utf-8"), write_to=str(png), scale=2)
+    print(svg_path)
     print(png)
     return png
 
@@ -171,7 +258,7 @@ async def capture_workspace(root: Path) -> None:
 async def capture_onboarding() -> None:
     if EMPTY.exists():
         shutil.rmtree(EMPTY)
-    EMPTY.mkdir()
+    EMPTY.mkdir(parents=True)
     app = CvgenApp(cwd=EMPTY, make_pdf=False)
     async with app.run_test(size=SIZE) as pilot:
         await pilot.pause()
@@ -182,6 +269,9 @@ async def capture_onboarding() -> None:
 
 def main_script() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
+    HOME.mkdir(parents=True, exist_ok=True)
+    if not DEJAVU.is_file():
+        raise SystemExit("Need DejaVu Sans Mono. Debian: sudo apt install fonts-dejavu-core")
     prepare_demo(DEMO)
     asyncio.run(capture_workspace(DEMO))
     asyncio.run(capture_onboarding())

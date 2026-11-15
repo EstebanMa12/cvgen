@@ -36,7 +36,7 @@ Screen {
     max-height: 9;
     margin: 0 2 0 2;
     background: #1e1f29;
-    border: round #6272a4;
+    border: round #bd93f9;
     padding: 0 1;
 }
 
@@ -47,7 +47,7 @@ Screen {
 #prompt-wrap {
     height: 3;
     margin: 0 1 0 1;
-    border: round #44475a;
+    border: round #bd93f9;
     background: #282a36;
 }
 
@@ -99,7 +99,7 @@ Screen {
 }
 
 .panel {
-    border: round #44475a;
+    border: round #bd93f9;
     background: #282a36;
     padding: 0 1;
     height: 100%;
@@ -260,7 +260,46 @@ Select {
 
 #jobs {
     height: 5;
-    border: round #44475a;
+    border: round #bd93f9;
     background: #282a36;
     margin-bottom: 1;
+}
+
+Button.-primary {
+    background: #bd93f9;
+    color: #282a36;
+}
+
+CommandPalette {
+    background: #282a36;
+    color: #f8f8f2;
+}
+
+CommandPalette > Vertical {
+    background: #1e1f29;
+}
+
+CommandPalette #--input {
+    background: #282a36;
+    border: solid #bd93f9;
+    color: #f8f8f2;
+}
+
+CommandList {
+    background: #1e1f29;
+    color: #f8f8f2;
+}
+
+CommandList > .option-list--option {
+    color: #f8f8f2;
+    background: #1e1f29;
+}
+
+CommandList > .option-list--option-highlighted {
+    color: #f8f8f2;
+    background: #44475a;
+}
+
+SearchIcon {
+    color: #bd93f9;
 }

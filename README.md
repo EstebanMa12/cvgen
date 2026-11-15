@@ -112,14 +112,14 @@ These are the interactive screen, captured headlessly from the fictional example
 
 ![Onboarding wizard](docs/screenshots/onboard.png)
 
-Regenerate them from a checkout (LibreOffice is needed for the page counts):
+Regenerate them from a checkout (LibreOffice is needed for the page counts, and DejaVu Sans Mono for the PNG text):
 
 ```bash
 pip install '.[ui]' cairosvg
 python scripts/make_screenshots.py
 ```
 
-The script builds the example workspace under `/tmp/cv`, drives `App.run_test` at 148×46, and saves SVG with `App.save_screenshot`. The PNG copy uses DejaVu Sans Mono so the braille logo and the box drawing keep their shapes. `cairosvg` is only for that conversion. It is not a runtime dependency.
+The script builds the example workspace at `~/cv-workspace` under a private `HOME`, drives `App.run_test` at 148×46, and saves SVG with `App.save_screenshot`. It turns color on even when `NO_COLOR` is set, then writes a 2× PNG. The braille logo is drawn as filled dots, because the usual monospace fonts paint U+2800 as empty boxes once Cairo applies `textLength`. `cairosvg` is only for that conversion. It is not a runtime dependency.
 
 Without a terminal, `cvgen` prints the command help. `cvgen init`, `cvgen build`, `cvgen verify`, and `cvgen tailor` stay non-interactive.
 
