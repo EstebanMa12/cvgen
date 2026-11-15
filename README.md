@@ -47,7 +47,7 @@ Page limits are 1 page for `short` and 2 pages for `extended`. If a CV overflows
 
 ## Quickstart
 
-In a terminal, `cvgen` with no subcommand opens an interactive screen. The bottom bar keeps the keys visible, in the same way htop keeps F1–F10 on screen:
+In a terminal, `cvgen` with no subcommand opens an interactive screen in a Dracula palette (purple, pink and cyan on a dark background). The bottom bar keeps the keys visible, in the same way htop keeps F1–F10 on screen. If the directory is not a workspace yet, the screen walks through creating `source/`, `cv/`, `jobs/` and `out/` before the table appears.
 
 ```text
 F1 Help   F2 Init   F5 Build   F6 Verify   F7 Tailor   F10 Quit
@@ -214,7 +214,7 @@ cvgen verify
 cvgen tailor --job jobs/lumenfield-backend.txt --lang es --length short --dry-run
 ```
 
-En una terminal, `cvgen` sin argumentos abre una pantalla interactiva. Abajo quedan las teclas, al estilo de htop: `F1` ayuda, `F2` crea el ejemplo, `F5` genera, `F6` verifica, `F7` adapta a una vacante y `F10` sale. Las flechas (o `j`/`k`) mueven la selección. En el modo de vacante, Enter solo escribe el prompt y `F5` llama al proveedor.
+En una terminal, `cvgen` sin argumentos abre una pantalla con colores de Dracula (morado, rosa y cian). Abajo quedan las teclas, al estilo de htop: `F1` ayuda, `F2` inicia las carpetas, `F5` genera, `F6` verifica, `F7` adapta a una vacante y `F10` sale. Si todavía no hay workspace, la pantalla guía la creación de `source/`, `cv/`, `jobs/` y `out/`: Enter avanza, Esc vuelve, y al final se elige el ejemplo de Avery Quinn o un CV en blanco con tu nombre. Las flechas (o `j`/`k`) mueven la selección. En el modo de vacante, Enter solo escribe el prompt y `F5` llama al proveedor.
 
 `cvgen init` crea un ejemplo con una persona ficticia, Avery Quinn, y empresas ficticias. `short` debe caber en una página y `extended` en dos. Si el texto no cabe, el programa reduce la letra hasta un mínimo (9 pt en la versión corta, 9,5 pt en la extendida) y, si aún se pasa, termina con error para que recortes el Markdown.
 

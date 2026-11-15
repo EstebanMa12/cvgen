@@ -19,9 +19,11 @@ from pathlib import Path
 from cvgen import __version__
 from cvgen.build import BuildJob, build_one, soffice_available
 from cvgen.config import Config, ConfigError, load_workspace
+from cvgen.onboard import Wizard, create, destination, folder_error, handle, hint, keys, name_error, screen_lines
 from cvgen.pdf import count_pdf_pages
 from cvgen.providers.base import DEFAULT_MODELS, ProviderError, canonicalize
 from cvgen.scaffold import init_workspace
+from cvgen.theme import apply_theme
 from cvgen.tailor import run_tailor
 from cvgen.util import display_path
 from cvgen.verify import verify_paths
@@ -46,7 +48,7 @@ HELP_TEXT = (
     "v, F6            verify the highlighted CV",
     "V                verify every variant",
     "t, F7            tailor. Enter writes the prompt, F5 calls the provider",
-    "r refresh       F1 or ? help       q or F10 quit       Esc back",
+    "r refresh       F2 new folders     F1 or ? help       q or F10 quit",
     "",
     "Shell:  cvgen build",
     "        cvgen verify",
@@ -79,6 +81,8 @@ class Screen:
     log: list[str] = field(default_factory=list)
     status: str = ""
     soffice: bool = False
+    wizard: Wizard = field(default_factory=Wizard)
+    help_from: str = "browse"
 
     def clamp(self) -> None:
         if not self.rows:
@@ -141,7 +145,8 @@ def load_screen(config_path: Path | None, root: Path | None = None) -> Screen:
     screen = Screen(root=config.root, config=config, soffice=soffice_available())
     screen.rows = collect_rows(config)
     if config.config_path is None:
-        screen.log = ["No cvgen.toml here. Press F2 to create the example workspace."]
+        screen.mode = "onboard"
+        screen.log = ["Enter walks through the folders. F10 quits."]
     else:
         screen.log = [f"{len(screen.rows)} variants. F5 builds the highlighted row, F6 checks it."]
     return screen
@@ -317,14 +322,14 @@ def _paint(window: curses.window, screen: Screen) -> None:
         _commands(window, height - 1, (("F10", "Quit"),))
         return
 
-    title_attr = curses.color_pair(1) | curses.A_BOLD
-    person = screen.config.person_name or "no workspace"
-    _fill(window, 0, curses.color_pair(1))
+    title_attr = curses.color_pair(2) | curses.A_BOLD
+    person = screen.config.person_name or "setup"
+    _fill(window, 0, curses.color_pair(9))
     _put(window, 0, 1, f"cvgen {__version__}", title_attr)
     _put(window, 0, max(1, width - len(person) - 2), person, title_attr)
 
     ratio, fullest = busiest(screen.rows)
-    _put(window, 1, 1, f"Pages {bar(ratio, 16)}  {fullest}", curses.color_pair(1))
+    _put(window, 1, 1, f"Pages {bar(ratio, 16)}  {fullest}", curses.color_pair(3) | curses.A_BOLD)
     pdf_label = "LibreOffice ready" if screen.soffice else "DOCX only, no LibreOffice"
     source = screen.config.source_path
     if source is not None and source.is_file():
@@ -333,7 +338,7 @@ def _paint(window: curses.window, screen: Screen) -> None:
         source_label = f"missing {display_path(source, screen.root)}"
     else:
         source_label = "source not set"
-    _put(window, 2, 1, f"{pdf_label}    {provider_label(screen.config)}    {source_label}", curses.color_pair(1))
+    _put(window, 2, 1, f"{pdf_label}    {provider_label(screen.config)}    {source_label}", curses.color_pair(12))
 
     log_top = height - 5
     list_height = max(1, log_top - 5)
@@ -342,16 +347,18 @@ def _paint(window: curses.window, screen: Screen) -> None:
             if 4 + offset >= log_top - 1:
                 break
             _put(window, 4 + offset, 1, line, curses.color_pair(1))
+    elif screen.mode == "onboard":
+        _paint_onboard(window, screen, 4, log_top - 1)
     else:
         _fill(window, 4, curses.color_pair(9))
-        _put(window, 4, 0, header_labels(), curses.color_pair(9) | curses.A_BOLD)
+        _put(window, 4, 0, header_labels(), curses.color_pair(2) | curses.A_BOLD)
     start = 0
     if len(screen.rows) > list_height:
         start = min(screen.selected, len(screen.rows) - list_height)
         start = max(0, start)
-    if screen.mode != "help" and not screen.rows:
-        _put(window, 5, 1, "No variants yet. F2 creates the fictional example.", curses.color_pair(4))
-    elif screen.mode != "help":
+    if screen.mode not in {"help", "onboard"} and not screen.rows:
+        _put(window, 5, 1, "No variants yet. F2 starts the folder setup.", curses.color_pair(8))
+    elif screen.mode not in {"help", "onboard"}:
         for offset, row in enumerate(screen.rows[start : start + list_height]):
             index = start + offset
             line = table_line(row, index == screen.selected)
@@ -359,23 +366,43 @@ def _paint(window: curses.window, screen: Screen) -> None:
                 _fill(window, 5 + offset, curses.color_pair(2))
                 _put(window, 5 + offset, 0, line, curses.color_pair(2) | curses.A_BOLD)
                 continue
-            attr = curses.A_NORMAL
             if (row.pages is not None and row.pages > row.limit) or not row.markdown_ok:
                 attr = curses.color_pair(4)
+            elif row.pages is not None:
+                attr = curses.color_pair(7)
+            else:
+                attr = curses.color_pair(1)
             _put(window, 5 + offset, 0, line, attr)
 
-    _put(window, log_top - 1, 1, "log", curses.color_pair(1) | curses.A_DIM)
+    _put(window, log_top - 1, 1, "log", curses.color_pair(3))
     visible_log = screen.log[-3:]
     for offset in range(3):
         text = visible_log[offset] if offset < len(visible_log) else ""
         _put(window, log_top + offset, 1, text, curses.A_NORMAL)
 
     hint = screen.status or _hint(screen)
-    _put(window, height - 2, 1, hint, curses.color_pair(1))
-    _commands(window, height - 1, _keys(screen.mode))
+    hint_attr = curses.color_pair(8) | curses.A_BOLD if screen.status else curses.color_pair(11)
+    _put(window, height - 2, 1, hint, hint_attr)
+    _commands(window, height - 1, _keys(screen))
+
+
+def _paint_onboard(window: curses.window, screen: Screen, top: int, limit: int) -> None:
+    roles = {
+        "title": curses.color_pair(3) | curses.A_BOLD,
+        "body": curses.color_pair(1),
+        "field": curses.color_pair(10) | curses.A_BOLD,
+        "dim": curses.color_pair(11),
+        "alert": curses.color_pair(4),
+    }
+    for offset, (role, text) in enumerate(screen_lines(screen.wizard, screen.root)):
+        if top + offset >= limit:
+            break
+        _put(window, top + offset, 1, text, roles.get(role, curses.color_pair(1)))
 
 
 def _hint(screen: Screen) -> str:
+    if screen.mode == "onboard":
+        return hint(screen.wizard)
     if screen.mode == "help":
         return "Esc closes help"
     if screen.mode == "job":
@@ -384,11 +411,13 @@ def _hint(screen: Screen) -> str:
     return BROWSE_HINT
 
 
-def _keys(mode: str) -> tuple[tuple[str, str], ...]:
-    if mode == "help":
+def _keys(screen: Screen) -> tuple[tuple[str, str], ...]:
+    if screen.mode == "help":
         return HELP_KEYS
-    if mode == "job":
+    if screen.mode == "job":
         return JOB_KEYS
+    if screen.mode == "onboard":
+        return keys(screen.wizard)
     return BROWSE_KEYS
 
 
@@ -450,11 +479,15 @@ def _on_browse(screen: Screen, key: int, config_path: Path | None) -> tuple[Path
         screen.clamp()
         return config_path, False
     if key in (curses.KEY_F1, ord("?")):
+        screen.help_from = "browse"
         screen.mode = "help"
         return config_path, False
     if key == curses.KEY_F2:
-        screen.status = "Creating the example workspace…"
-        config_path = _run(screen, config_path, lambda: perform_init(screen.root), screen.root / "cvgen.toml")
+        if screen.config.config_path is not None:
+            screen.log = ["This directory already has cvgen.toml. The folders are source/, cv/, jobs/ and out/."]
+            return config_path, False
+        screen.wizard = Wizard()
+        screen.mode = "onboard"
         return config_path, False
     if key in (curses.KEY_F5, ord("b"), curses.KEY_ENTER, 10, 13):
         indexes = _selected_indexes(screen, False)
@@ -520,6 +553,69 @@ def _on_job(screen: Screen, key: int, config_path: Path | None) -> tuple[Path | 
     return config_path, False
 
 
+def _on_onboard(screen: Screen, key: int, config_path: Path | None) -> tuple[Path | None, bool]:
+    action = _wizard_action(screen.wizard, key)
+    if action == "help":
+        screen.help_from = "onboard"
+        screen.mode = "help"
+        return config_path, False
+    if action is None:
+        return config_path, False
+    outcome = handle(screen.wizard, action)
+    if outcome == "quit":
+        return config_path, True
+    if screen.wizard.step == "folder" and action == "next" and folder_error(screen.wizard.folder):
+        screen.log = [folder_error(screen.wizard.folder) or ""]
+    if screen.wizard.step == "name" and action == "next" and name_error(screen.wizard.name):
+        screen.log = [name_error(screen.wizard.name) or ""]
+    if outcome != "create":
+        return config_path, False
+    target = destination(screen.root, screen.wizard.folder)
+    config_path = _run(
+        screen,
+        config_path,
+        lambda: _perform_create(screen.root, screen.wizard),
+        target / "cvgen.toml",
+    )
+    if (target / "cvgen.toml").is_file():
+        screen.mode = "browse"
+        screen.help_from = "browse"
+    return config_path, False
+
+
+def _wizard_action(wizard: Wizard, key: int) -> str | None:
+    if key == curses.KEY_F10 or (key == ord("q") and wizard.step in {"welcome", "kind", "review"}):
+        return "quit"
+    if key == 27:
+        return "back"
+    if key in (curses.KEY_BACKSPACE, 127, 8):
+        return "backspace"
+    if key in (curses.KEY_UP, ord("k")):
+        return "up"
+    if key in (curses.KEY_DOWN, ord("j")):
+        return "down"
+    if key in (curses.KEY_ENTER, 10, 13):
+        return "next"
+    if key in (curses.KEY_F1, ord("?")) and wizard.step in {"welcome", "kind", "review"}:
+        return "help"
+    if wizard.step == "kind" and key == ord("e"):
+        wizard.kind = "example"
+        return None
+    if wizard.step == "kind" and key == ord("b"):
+        wizard.kind = "blank"
+        return None
+    if 32 <= key <= 126 and wizard.step in {"folder", "name"}:
+        return f"type:{chr(key)}"
+    return None
+
+
+def _perform_create(base: Path, wizard: Wizard) -> int:
+    root = create(base, wizard)
+    print("Folders: source/  cv/  jobs/  out/")
+    print(f"Created {root}")
+    return 0
+
+
 def run(window: curses.window, config_path: Path | None) -> int:
     try:
         curses.curs_set(0)
@@ -529,14 +625,7 @@ def run(window: curses.window, config_path: Path | None) -> int:
     curses.noecho()
     try:
         if curses.has_colors():
-            curses.start_color()
-            curses.use_default_colors()
-            curses.init_pair(1, curses.COLOR_GREEN, -1)
-            curses.init_pair(2, curses.COLOR_BLACK, curses.COLOR_CYAN)
-            curses.init_pair(4, curses.COLOR_RED, -1)
-            curses.init_pair(5, curses.COLOR_BLACK, curses.COLOR_CYAN)
-            curses.init_pair(6, curses.COLOR_BLACK, curses.COLOR_WHITE)
-            curses.init_pair(9, curses.COLOR_BLACK, curses.COLOR_GREEN)
+            apply_theme(window)
     except curses.error:
         pass
     screen = load_screen(config_path)
@@ -549,15 +638,21 @@ def run(window: curses.window, config_path: Path | None) -> int:
             continue
         if screen.mode == "help":
             if key in (27, curses.KEY_F1, ord("?")):
-                screen.mode = "browse"
+                screen.mode = screen.help_from or "browse"
             elif key in (curses.KEY_F10, ord("q")):
                 return 0
             continue
-        if screen.mode == "job":
+        if screen.mode == "onboard":
+            creating = key in (10, 13, curses.KEY_ENTER) and screen.wizard.step == "review"
+            if creating:
+                screen.status = "Creating folders…"
+                _paint(window, screen)
+                window.refresh()
+            config_path, quit_now = _on_onboard(screen, key, config_path)
+        elif screen.mode == "job":
             config_path, quit_now = _on_job(screen, key, config_path)
         else:
-            # Paint the working status before a command that may take a while.
-            if key in (curses.KEY_F2, curses.KEY_F5, ord("b"), ord("B"), curses.KEY_F6, ord("v"), ord("V"), 10, 13, curses.KEY_ENTER):
+            if key in (curses.KEY_F5, ord("b"), ord("B"), curses.KEY_F6, ord("v"), ord("V"), 10, 13, curses.KEY_ENTER):
                 screen.status = "Working…"
                 _paint(window, screen)
                 window.refresh()

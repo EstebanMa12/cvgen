@@ -103,6 +103,16 @@ def test_interactive_screen_shows_keys_and_quits(tmp_path: Path):
     assert "Avery Quinn" in screen
 
 
+def test_new_directory_offers_to_create_folders(tmp_path: Path):
+    code, screen = _drive(tmp_path, b"q")
+    assert code == 0
+    assert "source/" in screen
+    assert "cv/" in screen
+    assert "jobs/" in screen
+    assert "out/" in screen
+    assert "F10" in screen
+
+
 def test_help_overlay_lists_shell_commands(tmp_path: Path):
     assert main(["init", "--dir", str(tmp_path)]) == 0
     code, screen = _drive(tmp_path, b"?q")
