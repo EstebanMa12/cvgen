@@ -47,6 +47,17 @@ Page limits are 1 page for `short` and 2 pages for `extended`. If a CV overflows
 
 ## Quickstart
 
+In a terminal, `cvgen` with no subcommand opens an interactive screen. The bottom bar keeps the keys visible, in the same way htop keeps F1–F10 on screen:
+
+```text
+F1 Help   F2 Init   F5 Build   F6 Verify   F7 Tailor   F10 Quit
+j/k move    Enter build    B build all    v verify    V verify all    r refresh    q quit
+```
+
+Up and down move through the variants. The meters show how much of the page budget each PDF is using. F7 asks for a job file: Enter writes the prompt without calling a provider, and F5 runs the provider.
+
+The shell commands do the same work:
+
 ```bash
 cvgen init
 cvgen build
@@ -164,6 +175,8 @@ Tailor exit codes: `0` ok, `1` configuration or authentication, `2` the model fa
 ## Commands
 
 ```bash
+cvgen                  # interactive screen when stdin and stdout are a terminal
+cvgen ui
 cvgen init [--dir DIR] [--force]
 cvgen build [VARIANT ...] [--input FILE --output FILE] [--length short|extended] [--no-pdf] [--require-pdf] [--no-autofit]
 cvgen verify [FILE ...] [--source FILE] [--require TEXT]
@@ -194,11 +207,14 @@ Hace falta LibreOffice (`soffice`) para el PDF. Las claves de API solo se leen d
 
 ```bash
 pipx install .
+cvgen
 cvgen init
 cvgen build
 cvgen verify
 cvgen tailor --job jobs/lumenfield-backend.txt --lang es --length short --dry-run
 ```
+
+En una terminal, `cvgen` sin argumentos abre una pantalla interactiva. Abajo quedan las teclas, al estilo de htop: `F1` ayuda, `F2` crea el ejemplo, `F5` genera, `F6` verifica, `F7` adapta a una vacante y `F10` sale. Las flechas (o `j`/`k`) mueven la selección. En el modo de vacante, Enter solo escribe el prompt y `F5` llama al proveedor.
 
 `cvgen init` crea un ejemplo con una persona ficticia, Avery Quinn, y empresas ficticias. `short` debe caber en una página y `extended` en dos. Si el texto no cabe, el programa reduce la letra hasta un mínimo (9 pt en la versión corta, 9,5 pt en la extendida) y, si aún se pasa, termina con error para que recortes el Markdown.
 
